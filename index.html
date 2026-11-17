@@ -1,0 +1,17 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Голосовой планировщик — прототип</title>
+<style>body{font:16px system-ui;background:#f3f5fa;color:#17243a;margin:0;padding:18px}main{max-width:760px;margin:auto}section{background:white;padding:18px;border-radius:16px;margin:14px 0}button,input{font:inherit;padding:11px;border-radius:9px;border:1px solid #ccd4e0}button{cursor:pointer;background:#245ed0;color:white}input{width:65%}li{padding:9px;border-bottom:1px solid #eee}small{color:#667}h1{font-size:26px}</style>
+<main><h1>🎙️ Голосовой планировщик</h1><p>Прототип: произнесите задачу или введите её вручную.</p>
+<section><button id="mic">🎤 Диктовать</button> <small id="status">Готов к вводу</small><p><input id="task" placeholder="Например: завтра купить продукты"><button id="add">Добавить</button></p></section>
+<section><h2>Мои дела</h2><ul id="list"></ul><button id="clear">Удалить выполненные</button></section>
+<p><small>Данные хранятся только в этом браузере. Голосовой ввод зависит от поддержки браузера и может использовать внешний сервис распознавания. Регистрация и синхронизация пока не реализованы.</small></p></main>
+<script>
+const key='voiceplanner_mvp_tasks';let tasks=[];try{tasks=JSON.parse(localStorage.getItem(key))||[]}catch(e){}
+const $=id=>document.getElementById(id);function save(){localStorage.setItem(key,JSON.stringify(tasks))}
+function render(){let ul=$('list');ul.replaceChildren();tasks.forEach(t=>{let li=document.createElement('li'),cb=document.createElement('input');cb.type='checkbox';cb.checked=t.done;cb.style.width='auto';cb.onchange=()=>{t.done=cb.checked;save();render()};let span=document.createElement('span');span.textContent=' '+t.text;span.style.textDecoration=t.done?'line-through':'';let del=document.createElement('button');del.textContent='×';del.style.float='right';del.onclick=()=>{tasks=tasks.filter(x=>x.id!==t.id);save();render()};li.append(cb,span,del);ul.append(li)})}
+function add(){let text=$('task').value.trim();if(!text)return;tasks.push({id:crypto.randomUUID(),text,done:false});$('task').value='';save();render()}
+$('add').onclick=add;$('task').onkeydown=e=>{if(e.key==='Enter')add()};$('clear').onclick=()=>{tasks=tasks.filter(t=>!t.done);save();render()};
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SpeechRecognition){$('mic').disabled=true;$('status').textContent='Голосовой ввод не поддерживается этим браузером'}else{$('mic').onclick=()=>{let r=new SpeechRecognition();r.lang='ru-RU';r.onresult=e=>{$('task').value=e.results[0][0].transcript;$('status').textContent='Речь распознана — проверьте и добавьте'};r.onerror=e=>$('status').textContent='Ошибка микрофона: '+e.error;r.start();$('status').textContent='Слушаю…'}}
+render();
+</script></html>
