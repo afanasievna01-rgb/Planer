@@ -1,17 +1,109 @@
-<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Голосовой планировщик — прототип</title>
-<style>body{font:16px system-ui;background:#f3f5fa;color:#17243a;margin:0;padding:18px}main{max-width:760px;margin:auto}section{background:white;padding:18px;border-radius:16px;margin:14px 0}button,input{font:inherit;padding:11px;border-radius:9px;border:1px solid #ccd4e0}button{cursor:pointer;background:#245ed0;color:white}input{width:65%}li{padding:9px;border-bottom:1px solid #eee}small{color:#667}h1{font-size:26px}</style>
-<main><h1>🎙️ Голосовой планировщик</h1><p>Прототип: произнесите задачу или введите её вручную.</p>
-<section><button id="mic">🎤 Диктовать</button> <small id="status">Готов к вводу</small><p><input id="task" placeholder="Например: завтра купить продукты"><button id="add">Добавить</button></p></section>
-<section><h2>Мои дела</h2><ul id="list"></ul><button id="clear">Удалить выполненные</button></section>
-<p><small>Данные хранятся только в этом браузере. Голосовой ввод зависит от поддержки браузера и может использовать внешний сервис распознавания. Регистрация и синхронизация пока не реализованы.</small></p></main>
-<script>
-const key='voiceplanner_mvp_tasks';let tasks=[];try{tasks=JSON.parse(localStorage.getItem(key))||[]}catch(e){}
-const $=id=>document.getElementById(id);function save(){localStorage.setItem(key,JSON.stringify(tasks))}
-function render(){let ul=$('list');ul.replaceChildren();tasks.forEach(t=>{let li=document.createElement('li'),cb=document.createElement('input');cb.type='checkbox';cb.checked=t.done;cb.style.width='auto';cb.onchange=()=>{t.done=cb.checked;save();render()};let span=document.createElement('span');span.textContent=' '+t.text;span.style.textDecoration=t.done?'line-through':'';let del=document.createElement('button');del.textContent='×';del.style.float='right';del.onclick=()=>{tasks=tasks.filter(x=>x.id!==t.id);save();render()};li.append(cb,span,del);ul.append(li)})}
-function add(){let text=$('task').value.trim();if(!text)return;tasks.push({id:crypto.randomUUID(),text,done:false});$('task').value='';save();render()}
-$('add').onclick=add;$('task').onkeydown=e=>{if(e.key==='Enter')add()};$('clear').onclick=()=>{tasks=tasks.filter(t=>!t.done);save();render()};
-const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-if(!SpeechRecognition){$('mic').disabled=true;$('status').textContent='Голосовой ввод не поддерживается этим браузером'}else{$('mic').onclick=()=>{let r=new SpeechRecognition();r.lang='ru-RU';r.onresult=e=>{$('task').value=e.results[0][0].transcript;$('status').textContent='Речь распознана — проверьте и добавьте'};r.onerror=e=>$('status').textContent='Ошибка микрофона: '+e.error;r.start();$('status').textContent='Слушаю…'}}
-render();
-</script></html>
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Мой недельный план</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f4f8;color:#19212c;font:16px system-ui,-apple-system,sans-serif}main{max-width:950px;margin:auto;padding:14px}h1{font-size:clamp(23px,5vw,32px);margin:18px 0 26px}h2{font-size:25px}section,details{background:white;border-radius:22px;padding:20px;margin:14px 0;box-shadow:0 3px 14px #1723390a}button,input,select,textarea{font:inherit;border:1px solid #cbd0d9;border-radius:12px;padding:10px;max-width:100%}button{cursor:pointer;background:#e9edf3;color:#19212c}button.primary{background:#2666cd;color:white;border:0}button.danger{color:#a23535;border:0;padding:5px;background:#f0f2f6;font-size:13px}button:disabled{opacity:.5}.toolbar,.line{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.toolbar{justify-content:space-between}.toolbar b{font-size:clamp(13px,3vw,18px)}.small{font-size:13px;color:#69737f}.tablewrap{overflow-x:auto}.grid{width:100%;border-collapse:collapse;table-layout:fixed}.grid th,.grid td{border-bottom:1px solid #e7e8eb;padding:10px 3px;text-align:center}.grid th:first-child,.grid td:first-child{text-align:left;width:43%}.grid th{font-size:14px}.tasktitle{font-weight:600;overflow-wrap:anywhere}.square{width:43px;height:43px;border:1px solid #cbd0d9;background:#f1f2f5;border-radius:12px;font-size:24px}.square.done{background:#34a374;color:white;border:0}.square.overdue{border-color:#db5555;background:#fff0f0}.actions{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.actions button{font-size:12px;padding:4px 7px;border:0}.formrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.formrow input[type=text]{flex:1;min-width:180px}.formrow select{flex:1;min-width:110px}#mic{white-space:nowrap}#preview{background:#f6f8fb;padding:12px;border-radius:12px;margin:12px 0}#preview[hidden],#answer[hidden]{display:none}.previewrow{padding:6px 0;border-bottom:1px solid #ddd}.tabs button.active{background:#2666cd;color:white}.status{margin:8px 0;color:#4a6075}.badge{font-size:12px;color:#5f6a79}details summary{cursor:pointer;font-size:19px;font-weight:600}textarea{width:100%;min-height:75px}.hint{font-size:13px;color:#687380}#answer{padding:12px;background:#eef4ff;border-radius:12px;margin:8px 0}@media(max-width:520px){main{padding:10px}section,details{padding:15px}.grid th:first-child,.grid td:first-child{width:44%}.square{width:35px;height:39px}.grid th,.grid td{padding:8px 1px}.grid th{font-size:12px}}
+</style></head><body><main><h1>📅 Мой недельный план</h1>
+<section><div class="toolbar"><button id="prev" aria-label="Предыдущая неделя">❮</button><b id="range"></b><button id="next" aria-label="Следующая неделя">❯</button><button id="today">Сегодня</button></div>
+<div class="line tabs" style="margin-top:12px"><button id="all" class="active">Вся неделя</button><button id="onlyToday">Один день</button><select id="categoryFilter" aria-label="Категория"><option value="">Все категории</option><option>Личное</option><option>Работа</option><option>Трейдинг</option><option>Покупки</option></select></div>
+<div class="tablewrap"><table class="grid"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+<p class="small">Зелёный — выполнено; красный — просрочено; серый — ожидает. Нажми квадрат для отметки.</p></section>
+<section><h2>Добавить дело</h2><div class="formrow"><input id="task" type="text" placeholder="Завтра купить продукты, в пятницу забрать стол"><button id="mic" class="primary">🎤 Говорить</button></div>
+<div class="formrow"><select id="repeat"><option value="once">Разовое</option><option value="daily">Ежедневно</option><option value="weekly">Каждую неделю</option></select><input type="date" id="date"><select id="category"><option>Личное</option><option>Работа</option><option>Трейдинг</option><option>Покупки</option></select><select id="priority"><option value="normal">Обычное</option><option value="high">Срочное</option></select></div>
+<div class="line"><button id="parse" class="primary">Разобрать команду</button><span id="status" class="status">Готов к работе</span></div>
+<div id="answer" hidden></div><div id="preview" hidden><b>Проверь распознанные действия</b><div id="previewRows"></div><div class="line" style="margin-top:12px"><button id="confirm" class="primary">Подтвердить</button><button id="cancel">Отмена</button></div></div>
+<p class="hint">Примеры: «завтра купить продукты, в четверг забрать стол», «каждый понедельник проверить аппарат», «перенеси купить продукты на субботу», «отметь забрать стол выполненным», «что у меня завтра?»</p>
+</section>
+<details><summary>📋 Вставить обновление из ChatGPT</summary><p class="hint">Вставь список задач в формате «дата | задача» (каждая с новой строки), затем проверь результат.</p><textarea id="bulk" placeholder="2026-11-18 | Купить продукты"></textarea><button id="importText">Разобрать список</button></details>
+<details><summary>💾 Резервная копия</summary><p class="hint">Данные хранятся только в этом браузере. Сохраняй копию перед сменой телефона или очисткой браузера.</p><button id="export">Скачать JSON</button> <input type="file" id="restore" accept=".json,application/json" aria-label="Восстановить копию"></details>
+<details><summary>🔔 Напоминания</summary><p>Напоминания на этой странице работают, только пока она открыта. Для уведомлений при закрытом браузере нужен отдельный сервис.</p><button id="notify">Разрешить уведомления</button><p class="hint">Укажи время в тексте задачи, например «завтра в 14:30 забрать заказ». Уведомление будет за 15 минут.</p></details>
+</main><script>
+'use strict';
+const KEY='smart_planer_v1', OLD='voice_planner_trial_2026', $=id=>document.getElementById(id);
+const wd=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'], weekdays=['воскресенье','понедельник','вторник','среду','четверг','пятницу','субботу'];
+const ds=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+const from=s=>new Date(s+'T12:00:00'), plus=(d,n)=>{let x=new Date(d);x.setDate(x.getDate()+n);return x}, mon=d=>plus(d,-(d.getDay()+6)%7);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+let tasks=[],selected=ds(new Date()),anchor=mon(new Date()),dayMode=false,pending=[];
+try{let saved=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(saved))tasks=saved;else{let old=JSON.parse(localStorage.getItem(OLD)||'[]');if(Array.isArray(old))tasks=old.map(t=>({...t,id:String(t.id),repeat:'once',category:'Личное',priority:'normal'}));}}catch(e){console.warn(e)}
+$('date').value=selected;
+function save(){localStorage.setItem(KEY,JSON.stringify(tasks))}
+function clean(s){return s.replace(/\s+/g,' ').replace(/^[,;.\s]+|[,;.\s]+$/g,'').trim()}
+function dateInfo(raw,defaultDate=selected){
+ let s=raw.toLowerCase(),now=new Date(),day=from(defaultDate),repeat='once',m;
+ if(/каждый день|ежедневно/.test(s)){repeat='daily';day=now}
+ else if(/кажд(?:ый|ую|ое)\s+(понедельник|вторник|среду|среда|четверг|пятницу|пятница|субботу|суббота|воскресенье)/.test(s))repeat='weekly';
+ if(/послезавтра/.test(s))day=plus(now,2);else if(/завтра/.test(s))day=plus(now,1);else if(/сегодня/.test(s))day=now;
+ else if((m=s.match(/(?:^|\s)(?:на\s+|в\s+|во\s+)?(следующ(?:ий|ую|ее)\s+)?(понедельник|вторник|среду|среда|четверг|пятницу|пятница|субботу|суббота|воскресенье)(?=\s|$|[,;.])/))){
+ let name=m[2].replace('среда','среду').replace('пятница','пятницу').replace('суббота','субботу'),n=weekdays.indexOf(name),delta=(n-now.getDay()+7)%7;
+ if(m[1])delta=delta===0?7:delta+7;day=plus(now,delta);
+ }else if((m=s.match(/(?:^|\s)(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{4}))?/))){let y=+(m[3]||now.getFullYear()),d=new Date(y,+m[2]-1,+m[1],12);if(d.getDate()===+m[1]&&d.getMonth()===+m[2]-1)day=d}
+ let time=(s.match(/(?:в\s+)([01]?\d|2[0-3]):([0-5]\d)/)||[]);return {date:ds(day),repeat,time:time[1]?time[1].padStart(2,'0')+':'+time[2]:''};
+}
+function strip(raw){
+ return clean(raw.replace(/(?:каждый день|ежедневно|кажд(?:ый|ую|ое)\s+(?:понедельник|вторник|среду|среда|четверг|пятницу|пятница|субботу|суббота|воскресенье))/gi,'')
+ .replace(/(?:послезавтра|завтра|сегодня)/gi,'').replace(/(?:в\s+|во\s+|на\s+)?(?:следующ(?:ий|ую|ее)\s+)?(?:понедельник|вторник|среду|среда|четверг|пятницу|пятница|субботу|суббота|воскресенье)/gi,'')
+ .replace(/\b\d{1,2}[.\/]\d{1,2}(?:[.\/]\d{4})?\b/g,'').replace(/(?:в\s+)(?:[01]?\d|2[0-3]):[0-5]\d/g,''));
+}
+function categoryFor(t){return /трейдинг|торговл|бирж/.test(t.toLowerCase())?'Трейдинг':/аппарат|кофе|обслуживан/.test(t.toLowerCase())?'Работа':/купить|продукт|магазин/.test(t.toLowerCase())?'Покупки':$('category').value}
+function segments(raw){
+ // Split at punctuation or conjunction before a new explicit date.
+ return raw.replace(/\s+(?:и|а)\s+(?=(?:сегодня|завтра|послезавтра|в\s+(?:понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)|каждый))/gi,', ')
+ .split(/[,;\n]+/).map(clean).filter(Boolean);
+}
+function occurrence(t,date){
+ if(t.repeat==='daily')return date>=t.date;
+ if(t.repeat==='weekly')return date>=t.date&&from(date).getDay()===from(t.date).getDay();
+ return date===t.date;
+}
+function done(t,date){return t.repeat==='once'?!!t.done:!!(t.completed&&t.completed[date])}
+function setDone(t,date,v){if(t.repeat==='once')t.done=v;else{t.completed=t.completed||{};t.completed[date]=v}save();render()}
+function matching(query){let q=clean(query).toLowerCase();return tasks.filter(t=>t.text.toLowerCase().includes(q)||q.includes(t.text.toLowerCase())).sort((a,b)=>b.date.localeCompare(a.date))}
+function parse(raw){
+ let input=clean(raw),low=input.toLowerCase();if(!input)return[];
+ if(/^(что|какие|покажи|сколько)\s/.test(low))return [{kind:'query',date:dateInfo(input,ds(new Date())).date,raw:input}];
+ let mv=input.match(/^(?:перенеси|перенести|перемести)\s+(.+?)\s+(?:на|в|во)\s+(.+)$/i);
+ if(mv)return [{kind:'move',target:clean(mv[1]),date:dateInfo(mv[2],selected).date}];
+ let doneMatch=input.match(/^(?:отметь|выполнил|выполнено|сделал|завершил)\s+(.+?)(?:\s+выполненн?ым)?$/i);
+ if(doneMatch)return [{kind:'done',target:clean(doneMatch[1].replace(/^что\s+/i,''))}];
+ let del=input.match(/^(?:удали|удалить)\s+(.+)$/i);if(del)return [{kind:'delete',target:clean(del[1])}];
+ return segments(input).map(part=>{let info=dateInfo(part,$('date').value||selected),text=strip(part);return {kind:'add',text:text||part,date:info.date,repeat:info.repeat==='once'?$('repeat').value:info.repeat,time:info.time,category:categoryFor(text),priority:$('priority').value}});
+}
+function describe(a){if(a.kind==='add')return `${a.date}${a.time?' '+a.time:''} — ${a.text} (${a.repeat==='daily'?'ежедневно':a.repeat==='weekly'?'еженедельно':'разово'}, ${a.category})`;
+ if(a.kind==='query')return 'Показать задачи на '+a.date;
+ return ({move:'Перенести',done:'Выполнить',delete:'Удалить'})[a.kind]+' «'+a.target+'»'+(a.date?' на '+a.date:'');
+}
+function preview(actions){pending=actions;$('previewRows').replaceChildren();for(let a of actions){let div=document.createElement('div');div.className='previewrow';div.textContent=describe(a);$('previewRows').append(div)}$('preview').hidden=!actions.length}
+function respond(s){$('answer').textContent=s;$('answer').hidden=false;if('speechSynthesis'in window){try{speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.lang='ru-RU';speechSynthesis.speak(u)}catch{}}}
+function apply(){
+ let messages=[];for(let a of pending){
+ if(a.kind==='add'){tasks.push({...a,id:uid(),done:false,completed:{}});messages.push('Добавлено: '+a.text);anchor=mon(from(a.date));selected=a.date}
+ else if(a.kind==='query'){let found=tasks.filter(t=>occurrence(t,a.date)&&!done(t,a.date));respond(found.length?'На '+a.date+': '+found.map(t=>t.text).join('; '):'На '+a.date+' невыполненных дел нет');selected=a.date;anchor=mon(from(a.date))}
+ else{let found=matching(a.target);if(found.length!==1){messages.push(found.length?'Найдено несколько похожих дел: уточни название':'Не найдено дело: '+a.target);continue}let t=found[0];if(a.kind==='move'){t.date=a.date;t.done=false;t.completed={};messages.push('Перенесено: '+t.text)}if(a.kind==='done'){setDone(t,selected,true);messages.push('Выполнено: '+t.text)}if(a.kind==='delete'){tasks=tasks.filter(x=>x.id!==t.id);messages.push('Удалено: '+t.text)}}
+ }save();render();$('preview').hidden=true;pending=[];$('task').value='';$('status').textContent=messages.join('. ')||'Готово'}
+function cell(t,date){let td=document.createElement('td');if(!occurrence(t,date))return td;let b=document.createElement('button');b.className='square'+(done(t,date)?' done':date<ds(new Date())?' overdue':'');b.textContent=done(t,date)?'✓':'';b.title=t.text+' — '+date;b.setAttribute('aria-label',t.text+' '+date);b.onclick=()=>setDone(t,date,!done(t,date));td.append(b);return td}
+function render(){
+ let start=mon(anchor),end=plus(start,6),dates=Array.from({length:7},(_,i)=>ds(plus(start,i)));
+ $('range').textContent=start.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+' – '+end.toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'});
+ $('all').classList.toggle('active',!dayMode);$('onlyToday').classList.toggle('active',dayMode);
+ let shown=dayMode?[selected]:dates,head=document.createElement('tr');for(let x of ['Дела',...shown.map(d=>wd[from(d).getDay()])]){let th=document.createElement('th');th.textContent=x;head.append(th)}$('thead').replaceChildren(head);$('tbody').replaceChildren();
+ let filtered=tasks.filter(t=>(!$('categoryFilter').value||t.category===$('categoryFilter').value)&&shown.some(d=>occurrence(t,d))).sort((a,b)=>(b.priority==='high')-(a.priority==='high')||a.text.localeCompare(b.text,'ru'));
+ if(!filtered.length){let tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=shown.length+1;td.textContent='На выбранные дни задач нет';tr.append(td);$('tbody').append(tr)}
+ for(let t of filtered){let tr=document.createElement('tr'),td=document.createElement('td'),name=document.createElement('div');name.className='tasktitle';name.textContent=(t.priority==='high'?'❗ ':'')+t.text;td.append(name);let hint=document.createElement('div');hint.className='badge';hint.textContent=(t.repeat==='daily'?'Ежедневно':t.repeat==='weekly'?'Еженедельно':'Разовое')+' · '+(t.category||'Личное')+(t.time?' · '+t.time:'');td.append(hint);
+ let actions=document.createElement('div');actions.className='actions';let move=document.createElement('button');move.textContent='Перенести';move.onclick=()=>{let s=prompt('Новая дата (ГГГГ-ММ-ДД)',t.date);if(s&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(from(s).getTime())){t.date=s;t.completed={};save();render()}};let del=document.createElement('button');del.className='danger';del.textContent='Удалить';del.onclick=()=>{if(confirm('Удалить «'+t.text+'»?')){tasks=tasks.filter(x=>x.id!==t.id);save();render()}};actions.append(move,del);td.append(actions);tr.append(td);for(let d of shown)tr.append(cell(t,d));$('tbody').append(tr)}
+}
+$('prev').onclick=()=>{anchor=plus(anchor,-7);selected=ds(anchor);$('date').value=selected;render()};
+$('next').onclick=()=>{anchor=plus(anchor,7);selected=ds(anchor);$('date').value=selected;render()};
+$('today').onclick=()=>{anchor=mon(new Date());selected=ds(new Date());$('date').value=selected;render()};
+$('all').onclick=()=>{dayMode=false;render()};$('onlyToday').onclick=()=>{dayMode=true;render()};
+$('categoryFilter').onchange=render;
+$('parse').onclick=()=>preview(parse($('task').value));$('task').onkeydown=e=>{if(e.key==='Enter')$('parse').click()};
+$('confirm').onclick=apply;$('cancel').onclick=()=>{pending=[];$('preview').hidden=true};
+$('importText').onclick=()=>{let lines=$('bulk').value.split('\n').filter(Boolean);let a=lines.map(s=>{let m=s.match(/^(\d{4}-\d\d-\d\d)\s*\|\s*(.+)$/);return m?{kind:'add',date:m[1],text:m[2],repeat:'once',category:categoryFor(m[2]),priority:'normal',time:''}:parse(s)}).flat();preview(a)};
+$('export').onclick=()=>{let blob=new Blob([JSON.stringify({version:1,tasks},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='planer-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+$('restore').onchange=async e=>{let file=e.target.files[0];if(!file)return;try{let data=JSON.parse(await file.text()),arr=Array.isArray(data)?data:data.tasks;if(!Array.isArray(arr)||!arr.every(t=>t&&typeof t.text==='string'&&/^\d{4}-\d\d-\d\d$/.test(t.date)))throw Error('Неверный формат');if(confirm('Заменить текущие дела данными из копии?')){tasks=arr;save();render()}}catch(err){alert('Не удалось прочитать копию: '+err.message)}e.target.value=''};
+const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition){$('mic').disabled=true;$('status').textContent='Голосовой ввод не поддерживается браузером'}else $('mic').onclick=()=>{let r=new Recognition();r.lang='ru-RU';r.onresult=e=>{$('task').value=e.results[0][0].transcript;$('status').textContent='Проверь распознанную команду';preview(parse($('task').value))};r.onerror=e=>$('status').textContent='Ошибка микрофона: '+e.error;r.start();$('status').textContent='Слушаю…'};
+$('notify').onclick=async()=>{if(!('Notification'in window))return alert('Браузер не поддерживает уведомления');let p=await Notification.requestPermission();alert(p==='granted'?'Разрешено. Уведомления работают только при открытой странице.':'Уведомления не разрешены')};
+let notified=new Set();function checkReminders(){if(!('Notification'in window)||Notification.permission!=='granted')return;let now=new Date(),today=ds(now);for(let t of tasks){if(!t.time||!occurrence(t,today)||done(t,today))continue;let [h,m]=t.time.split(':').map(Number),at=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m),diff=at-now,key=t.id+today;if(diff>0&&diff<=15*60000&&!notified.has(key)){notified.add(key);new Notification('Скоро дело: '+t.text,{body:'Через '+Math.ceil(diff/60000)+' мин.'})}}}
+setInterval(checkReminders,30000);render();
+</script></body></html>
